@@ -25,7 +25,7 @@ function App() {
     try {
       // B. Send the image to Python using Axios
       // We are sending a POST request to your Flask server
-      const response = await axios.post("http://127.0.0.1:5000/predict", {
+      const response = await axios.post("https://face-recognition-app-k4ww.onrender.com/predict", {
         image: imageData,
       });
 
