@@ -1,0 +1,10 @@
+# Ignore Python
+__pycache__/
+*.py[cod]
+venv/
+backend/data/
+
+# Ignore Node.js
+node_modules/
+build/
+.env
