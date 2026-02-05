@@ -1,110 +1,90 @@
-// frontend/src/App.js
-import React, { useRef, useState, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import Webcam from "react-webcam";
 import axios from "axios";
-import "./App.css"; // We will keep the default styling for now
+import "./App.css";
 
 function App() {
-  // 1. Create a "reference" to the webcam so we can take screenshots
   const webcamRef = useRef(null);
-  
-  // 2. Create "State" variables to store the app's status
-  // result: stores the answer from Python (e.g., "Face detected")
-  const [result, setResult] = useState(null); 
-  // imageSrc: stores the snapshot we take
-  const [imageSrc, setImageSrc] = useState(null);
+  const [imgSrc, setImgSrc] = useState(null);
+  const [prediction, setPrediction] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // 3. Define the "Capture" function
-  // useCallback is a React hook that prevents the function from being recreated every render
   const capture = useCallback(async () => {
-    
-    // A. Take a screenshot from the webcam
-    const imageData = webcamRef.current.getScreenshot();
-    setImageSrc(imageData); // Save it to show on screen
+    const imageSrc = webcamRef.current.getScreenshot();
+    setImgSrc(imageSrc);
+    setLoading(true); // Start loading animation
+    setPrediction(null); // Clear old result
 
     try {
-      // B. Send the image to Python using Axios
-      // We are sending a POST request to your Flask server
+      // Send to Backend
       const response = await axios.post("/predict", {
-        image: imageData,
+        image: imageSrc,
       });
 
-      // C. Save the response from Python to our state
-      console.log("Response from Python:", response.data);
-      setResult(response.data);
-
+      setPrediction(response.data);
     } catch (error) {
-      console.error("Error connecting to Python:", error);
-      setResult({ message: "Error connecting to server" });
+      console.error("Error:", error);
+      setPrediction({ message: "Error connecting to server" });
+    } finally {
+      setLoading(false); // Stop loading animation
     }
   }, [webcamRef]);
 
   return (
-    <div style={styles.container}>
-      <h1>Face Recognition System</h1>
-      
-      <div style={styles.webcamBox}>
-        {/* The Webcam Component */}
-        <Webcam
-          audio={false}
-          ref={webcamRef}
-          screenshotFormat="image/jpeg"
-          width={500}
-        />
-      </div>
+    <div className="app-container">
+      {/* Navbar */}
+      <header className="navbar">
+        <div className="logo">👁️ SecureScan AI</div>
+        <div className="status-dot"></div>
+      </header>
 
-      {/* The Button to trigger the Capture function */}
-      <button onClick={capture} style={styles.button}>
-        Scan My Face
-      </button>
+      <main className="main-content">
+        <div className="scanner-section">
+          <div className="camera-frame">
+            <Webcam
+              audio={false}
+              ref={webcamRef}
+              screenshotFormat="image/jpeg"
+              className="webcam-feed"
+            />
+            {/* Overlay for scanning effect */}
+            <div className="scan-overlay"></div>
+          </div>
 
-      {/* Display the Results if we have them */}
-      {imageSrc && (
-        <div style={styles.resultBox}>
-          <h3>Last Snapshot:</h3>
-          <img src={imageSrc} alt="Captured" width="200" />
+          <button 
+            className="capture-btn" 
+            onClick={capture} 
+            disabled={loading}
+          >
+            {loading ? "Scanning..." : "Identify User"}
+          </button>
         </div>
-      )}
 
-      {result && (
-        <div style={styles.resultBox}>
-          <h3>Result from AI:</h3>
-          <p>Message: <b>{result.message}</b></p>
-          <p>Faces Found: <b>{result.face_count}</b></p>
+        {/* Results Panel */}
+        <div className="results-section">
+          {imgSrc && (
+            <div className="result-card fade-in">
+              <h3>Captured Snapshot</h3>
+              <img src={imgSrc} alt="captured" className="captured-img" />
+              
+              <div className="prediction-box">
+                {loading ? (
+                  <div className="spinner"></div>
+                ) : (
+                  <>
+                    <h4>AI Analysis:</h4>
+                    <p className="result-text">
+                      {prediction ? prediction.message : "Processing..."}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </main>
     </div>
   );
 }
-
-// Simple CSS styles directly in the file for simplicity
-const styles = {
-  container: {
-    textAlign: "center",
-    padding: "20px",
-    fontFamily: "Arial, sans-serif",
-  },
-  webcamBox: {
-    margin: "20px auto",
-    border: "5px solid #333",
-    width: "fit-content",
-  },
-  button: {
-    padding: "10px 20px",
-    fontSize: "18px",
-    backgroundColor: "#007BFF",
-    color: "white",
-    border: "none",
-    cursor: "pointer",
-    borderRadius: "5px",
-  },
-  resultBox: {
-    marginTop: "20px",
-    padding: "10px",
-    border: "1px solid #ccc",
-    display: "inline-block",
-    textAlign: "left",
-  }
-};
 
 export default App;
