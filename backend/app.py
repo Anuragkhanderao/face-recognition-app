@@ -73,7 +73,7 @@ def predict():
 
             # 3. Confidence Threshold
             # If less than 60% of neighbors agree, it's likely an unknown person or error
-            if max_prob >= 0.6:
+            if max_prob >= 0.8:
                 identified_names.append(prediction)
             else:
                 identified_names.append("Unknown")
