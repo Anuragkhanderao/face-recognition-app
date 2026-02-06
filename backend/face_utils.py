@@ -26,19 +26,10 @@ def decode_image(base64_string):
     return img
 
 def detect_faces(img):
-    """
-    This function looks at the image and returns a list of faces found.
-    Each face is a list of 4 numbers: [x, y, width, height].
-    """
-    # Load the pre-trained face detector file (Haar Cascade)
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-
-    # Convert the image to Grayscale (black & white) because it's faster for AI
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # Detect faces
-    # scaleFactor=1.1: reduce image size by 10% each pass to find big and small faces
-    # minNeighbors=4: higher number means fewer false positives (more strict)
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4)
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    
+    # The important part: this returns a LIST of rectangles, not just one.
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
     
     return faces

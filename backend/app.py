@@ -43,52 +43,53 @@ def serve():
 @app.route('/predict', methods=['POST'])
 def predict():
     if not knn:
-        return jsonify({"message": "Server not trained yet"}), 500
+        return jsonify({"message": "Server not trained yet."}), 500
 
     try:
         data = request.get_json()
         img = decode_image(data['image'])
         
-        # Detect Faces
+        # 1. Detect ALL faces
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        faces = detect_faces(img)
+        faces = detect_faces(img) # This returns a list of all faces found
 
         if len(faces) == 0:
             return jsonify({"message": "No face detected", "face_count": 0})
 
         identified_names = []
-        
-        # --- NEW LOGIC: Loop through ALL faces ---
+
+        # 2. Loop through EVERY face found in the frame
         for (x, y, w, h) in faces:
-            # 1. Crop and Resize face
+            # Crop the specific face
             face_section = gray[y:y+h, x:x+w]
             face_section = cv2.resize(face_section, (50, 50))
             face_vector = [face_section.flatten()]
 
-            # 2. Get Prediction AND Probability (Confidence)
-            # predict_proba returns the percentage of votes (e.g., [0.2, 0.8])
+            # Predict
             probabilities = knn.predict_proba(face_vector)[0]
-            max_prob = np.max(probabilities)
-            prediction = knn.predict(face_vector)[0]
+            max_confidence = np.max(probabilities)
+            prediction_name = knn.predict(face_vector)[0]
 
-            # 3. Confidence Threshold
-            # If less than 60% of neighbors agree, it's likely an unknown person or error
-            if max_prob >= 0.8:
-                identified_names.append(prediction)
+            # Threshold Check (75% confidence)
+            if max_confidence >= 0.75:
+                identified_names.append(prediction_name)
             else:
-                identified_names.append("Unknown")
+                identified_names.append("Unknown Person")
 
-        # --- Format the Final Message ---
-        # Removes duplicates (so it doesn't say "Anurag, Anurag")
-        unique_names = list(set(identified_names))
+        # 3. Create the "Smart" Message
+        # Remove duplicates (e.g., in case it detects you twice by mistake)
+        unique_names = sorted(list(set(identified_names)))
         
-        if "Unknown" in unique_names and len(unique_names) == 1:
-            message = "Face detected but not recognized."
+        # Formatting the sentence nicely
+        if len(unique_names) == 0:
+            message = "No faces recognized."
+        elif len(unique_names) == 1:
+            message = f"Hello, {unique_names[0]}!"
         else:
-            names_str = ", ".join([n for n in unique_names if n != "Unknown"])
-            message = f"Hello, {names_str}!"
-            if "Unknown" in unique_names:
-                message += " (and Unknown person)"
+            # Joins names like: "Anurag, Mummy and Unknown Person"
+            all_but_last = ", ".join(unique_names[:-1])
+            last = unique_names[-1]
+            message = f"Hello, {all_but_last} and {last}!"
 
         return jsonify({
             "message": message,
